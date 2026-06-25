@@ -1,3 +1,7 @@
+custom_imports = dict(
+    imports=['mmseg.models.backbones.hvac_mfr', 'mmseg.models.decode_heads.hvac_mfr_head'],
+    allow_failed_imports=False)
+
 _base_ = [
     '../_base_/default_runtime.py', '../_base_/schedules/schedule_160k.py',
     '../_base_/datasets/pascal_voc12.py'

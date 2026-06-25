@@ -1,6 +1,6 @@
 # Register HVAC-MFR in MMSegmentation
 
-If you copy this implementation into an existing MMSegmentation checkout, add the following imports:
+The provided HVAC-MFR configs already include custom_imports, so manual registration is usually not required. If you want permanent registration in an existing MMSegmentation checkout, add the following imports:
 
 ```python
 # mmseg/models/backbones/__init__.py

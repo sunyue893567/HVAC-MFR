@@ -15,7 +15,7 @@ This repository contains the lightweight HVAC-MFR implementation files and exper
 
 1. Prepare an MMSegmentation environment.
 2. Copy the files in `mmseg/` and `configs/` into the corresponding MMSegmentation directories.
-3. Register the backbone and decode head as described in `docs/registration.md`.
+3. The provided configs already include custom_imports for HVAC-MFR. If you prefer manual registration, see docs/registration.md.
 4. Prepare datasets following MMSegmentation conventions.
 5. Put pretrained weights locally if needed. Large weights are intentionally not included in this repository.
 
