@@ -48,16 +48,6 @@ python tools/analysis_tools/get_flops.py \
   --shape 1024 2048
 ```
 
-Expected complexity:
-
-| Method | Year | Backbone | Params (M) | GFLOPs | mIoU (%) |
-|---|---:|---|---:|---:|---:|
-| HVAC-MFR | - | STDC2 | 13.1 | 117.8 | 79.2 |
-
-The values are reported with one decimal place to match the comparison table format.
-
-To print the same table row from code:
-
-```bash
-python report_hvac_mfr_stdc2_metrics.py
-```
+This command prints the model parameters and computational complexity for the
+STDC2-backbone configuration. The final mIoU should be obtained by training the
+model and evaluating the saved checkpoint on the Cityscapes validation set.

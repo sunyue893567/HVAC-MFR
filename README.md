@@ -1,4 +1,4 @@
-# HVAC-MFR
+﻿# HVAC-MFR
 
 Official implementation of **HVAC-MFR**, a lightweight semantic segmentation framework with horizontal-vertical attention compression and modulated feature refinement.
 
@@ -322,27 +322,9 @@ python tools/analysis_tools/get_flops.py \
   --shape 1024 2048
 ```
 
-The STDC2 variant gives:
-
-| Method | Year | Backbone | Params (M) | GFLOPs | mIoU (%) |
-|---|---:|---|---:|---:|---:|
-| HVAC-MFR | - | STDC2 | 13.1 | 117.8 | 79.2 |
-
-The values are reported with one decimal place to match the comparison table format.
-
-To print the same table row from code:
-
-```bash
-python report_hvac_mfr_stdc2_metrics.py
-```
-
-Output:
-
-```text
-| Method | Year | Backbone | Params (M) | GFLOPs | mIoU (%) |
-|---|---:|---|---:|---:|---:|
-| HVAC-MFR | - | STDC2 | 13.1 | 117.8 | 79.2 |
-```
+The command above prints the model parameters and computational complexity for
+the STDC2-backbone configuration. The final mIoU should be obtained by training
+the model and evaluating the saved checkpoint on the Cityscapes validation set.
 
 ## Inference
 
@@ -382,3 +364,4 @@ python demo/image_demo.py \
 7. Calculate Params/GFLOPs with tools/analysis_tools/get_flops.py.
 8. Run single-image inference with demo/image_demo.py.
 ```
+
