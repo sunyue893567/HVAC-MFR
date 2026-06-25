@@ -70,22 +70,23 @@ pip install numpy==1.26.4 opencv-python==4.13.0.92 pillow==10.3.0 \
 
 ## Project placement
 
-This project follows the MMSegmentation directory layout. The HVAC-MFR files should be placed under an MMSegmentation working directory as follows:
+This project follows the MMSegmentation directory layout. Place the HVAC-MFR files under an MMSegmentation working directory as follows:
 
 ```text
 mmsegmentation/
-├── configs/
-│   └── hvac_mfr/
-│       ├── hvac_mfr-t_1xb4-160k_voc2012-512x512.py
-│       └── hvac_mfr-t_1xb4-160k_cityscapes-512x1024.py
-├── mmseg/
-│   └── models/
-│       ├── backbones/
-│       │   └── hvac_mfr.py
-│       └── decode_heads/
-│           └── hvac_mfr_head.py
-└── docs/
-    └── registration.md
+|-- configs/
+|   `-- hvac_mfr/
+|       |-- hvac_mfr-t_1xb4-160k_voc2012-512x512.py
+|       |-- hvac_mfr-t_1xb4-160k_cityscapes-512x1024.py
+|       `-- hvac_mfr-stdc2_1xb4-160k_cityscapes-512x1024.py
+|-- mmseg/
+|   `-- models/
+|       |-- backbones/
+|       |   `-- hvac_mfr.py
+|       `-- decode_heads/
+|           `-- hvac_mfr_head.py
+`-- docs/
+    `-- registration.md
 ```
 
 The provided configuration files use `custom_imports` to register the HVAC-MFR backbone and decode head automatically. Manual registration is not required for the provided configs.
@@ -100,12 +101,12 @@ The VOC config uses `PascalVOCDataset` with 21 classes. The expected directory s
 
 ```text
 data/VOCdevkit/VOC2012/
-├── JPEGImages/
-├── SegmentationClass/
-└── ImageSets/
-    └── Segmentation/
-        ├── train.txt
-        └── val.txt
+|-- JPEGImages/
+|-- SegmentationClass/
+`-- ImageSets/
+    `-- Segmentation/
+        |-- train.txt
+        `-- val.txt
 ```
 
 The corresponding config is:
@@ -133,20 +134,21 @@ The Cityscapes config uses `CityscapesDataset` with 19 classes. The expected dir
 
 ```text
 data/cityscapes/
-├── leftImg8bit/
-│   ├── train/
-│   ├── val/
-│   └── test/
-└── gtFine/
-    ├── train/
-    ├── val/
-    └── test/
+|-- leftImg8bit/
+|   |-- train/
+|   |-- val/
+|   `-- test/
+`-- gtFine/
+    |-- train/
+    |-- val/
+    `-- test/
 ```
 
-The corresponding config is:
+The corresponding configs are:
 
 ```text
 configs/hvac_mfr/hvac_mfr-t_1xb4-160k_cityscapes-512x1024.py
+configs/hvac_mfr/hvac_mfr-stdc2_1xb4-160k_cityscapes-512x1024.py
 ```
 
 Key dataset settings:
@@ -164,7 +166,15 @@ Key dataset settings:
 
 ## Configuration overview
 
-All provided HVAC-MFR configs use the same main model structure:
+The repository provides two model settings:
+
+| Config | Backbone | Decode head | Dataset |
+|---|---|---|---|
+| `hvac_mfr-t_1xb4-160k_voc2012-512x512.py` | `HVACMFR` | `HVACMFRHead` | PASCAL VOC 2012 |
+| `hvac_mfr-t_1xb4-160k_cityscapes-512x1024.py` | `HVACMFR` | `HVACMFRHead` | Cityscapes |
+| `hvac_mfr-stdc2_1xb4-160k_cityscapes-512x1024.py` | `STDC2` | `HVACMFRHead` | Cityscapes |
+
+The default HVAC-MFR lightweight encoder uses:
 
 | Component | Setting |
 |---|---|
@@ -182,6 +192,8 @@ All provided HVAC-MFR configs use the same main model structure:
 | Validation interval | 16,000 |
 | Checkpoint interval | 16,000 |
 | LR schedule | Linear warm-up for 1,500 iterations + polynomial decay |
+
+The STDC2 variant uses the MMSegmentation `STDCContextPathNet` backbone with `stdc_type='STDCNet2'` and the proposed `HVACMFRHead`. It is included for comparison under an STDC2 backbone setting.
 
 The training pipeline is:
 
@@ -222,11 +234,18 @@ python tools/train.py configs/hvac_mfr/hvac_mfr-t_1xb4-160k_cityscapes-512x1024.
   --work-dir work_dirs/hvac_mfr_cityscapes
 ```
 
+### Train the STDC2 variant on Cityscapes
+
+```bash
+python tools/train.py configs/hvac_mfr/hvac_mfr-stdc2_1xb4-160k_cityscapes-512x1024.py \
+  --work-dir work_dirs/hvac_mfr_stdc2_cityscapes
+```
+
 If the Cityscapes dataset is stored in another directory:
 
 ```bash
-python tools/train.py configs/hvac_mfr/hvac_mfr-t_1xb4-160k_cityscapes-512x1024.py \
-  --work-dir work_dirs/hvac_mfr_cityscapes \
+python tools/train.py configs/hvac_mfr/hvac_mfr-stdc2_1xb4-160k_cityscapes-512x1024.py \
+  --work-dir work_dirs/hvac_mfr_stdc2_cityscapes \
   --cfg-options \
   train_dataloader.dataset.data_root=/path/to/cityscapes \
   val_dataloader.dataset.data_root=/path/to/cityscapes \
@@ -273,7 +292,43 @@ python tools/test.py \
   <checkpoint_file>
 ```
 
+### Validate the STDC2 variant
+
+```bash
+python tools/test.py \
+  configs/hvac_mfr/hvac_mfr-stdc2_1xb4-160k_cityscapes-512x1024.py \
+  <checkpoint_file>
+```
+
 The evaluation results, including mIoU, will be printed in the terminal and saved in the corresponding work directory logs.
+
+## Model complexity
+
+Use `tools/analysis_tools/get_flops.py` to calculate parameters and GFLOPs.
+
+### Default HVAC-MFR on Cityscapes
+
+```bash
+python tools/analysis_tools/get_flops.py \
+  configs/hvac_mfr/hvac_mfr-t_1xb4-160k_cityscapes-512x1024.py \
+  --shape 1024 2048
+```
+
+### HVAC-MFR head with STDC2 backbone
+
+```bash
+python tools/analysis_tools/get_flops.py \
+  configs/hvac_mfr/hvac_mfr-stdc2_1xb4-160k_cityscapes-512x1024.py \
+  --shape 1024 2048
+```
+
+The STDC2 variant gives:
+
+| Method | Backbone | Input size | Params (M) | GFLOPs |
+|---|---|---|---:|---:|
+| HVAC-MFR | STDC2 | 1024 x 2048 | 13.079 | 118.0 |
+
+The mIoU of this variant should be reported after training and validation on the Cityscapes validation set.
 
 ## Inference
 
@@ -310,5 +365,6 @@ python demo/image_demo.py \
 4. Train the model with tools/train.py.
 5. Monitor logs and checkpoints under work_dirs/.
 6. Evaluate the trained checkpoint with tools/test.py.
-7. Run single-image inference with demo/image_demo.py.
+7. Calculate Params/GFLOPs with tools/analysis_tools/get_flops.py.
+8. Run single-image inference with demo/image_demo.py.
 ```
