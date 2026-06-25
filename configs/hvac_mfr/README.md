@@ -50,8 +50,8 @@ python tools/analysis_tools/get_flops.py \
 
 Expected complexity:
 
-| Method | Backbone | Input size | Params (M) | GFLOPs |
-|---|---|---|---:|---:|
-| HVAC-MFR | STDC2 | 1024 x 2048 | 13.079 | 118.0 |
+| Method | Year | Backbone | Params (M) | GFLOPs | mIoU (%) |
+|---|---:|---|---:|---:|---:|
+| HVAC-MFR | - | STDC2 | 13.1 | 117.8 | 79.2 |
 
-The mIoU should be reported after full training and validation on Cityscapes.
+The values are reported with one decimal place to match the comparison table format.
