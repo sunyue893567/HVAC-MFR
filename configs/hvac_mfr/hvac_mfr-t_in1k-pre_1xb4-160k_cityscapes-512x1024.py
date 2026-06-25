@@ -12,7 +12,7 @@ _base_ = [
 norm_cfg = dict(type='BN', requires_grad=True)
 head_norm_cfg = dict(type='GN', num_groups=32, requires_grad=True)
 crop_size = (512, 1024)
-data_root = 'D:/Program Files/Git/dev/cityscapes/'
+data_root = 'data/cityscapes'
 
 data_preprocessor = dict(
     type='SegDataPreProcessor',
@@ -38,7 +38,7 @@ model = dict(
         hvac_axis_kernel_size=7,
         act_cfg=dict(type='GELU'),
         norm_cfg=norm_cfg,
-        init_cfg=dict(type='Pretrained', checkpoint='D:/Program Files/Git/dev/mmsegmentation/pretrain/hvac_mfr_in1k_full.pth')),
+        init_cfg=dict(type='Pretrained', checkpoint='pretrain/hvac_mfr_in1k_full.pth')),
     decode_head=dict(
         type='HVACMFRHead',
         in_channels=[32, 64, 160, 256],

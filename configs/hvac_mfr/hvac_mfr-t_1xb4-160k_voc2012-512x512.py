@@ -11,7 +11,7 @@ _base_ = [
 norm_cfg = dict(type='BN', requires_grad=True)
 head_norm_cfg = dict(type='GN', num_groups=32, requires_grad=True)
 crop_size = (512, 512)
-data_root = '/root/autodl-tmp/data/VOCdevkit/VOC2012'
+data_root = 'data/VOCdevkit/VOC2012'
 
 data_preprocessor = dict(
     type='SegDataPreProcessor',

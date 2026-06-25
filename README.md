@@ -54,6 +54,115 @@ pip install numpy==1.26.4 opencv-python==4.13.0.92 pillow==10.3.0 \
 
 The provided configuration files use `custom_imports` to register the HVAC-MFR backbone and decode head automatically. Manual registration is therefore not required for the provided configs. Additional registration notes are provided in `docs/registration.md`.
 
+
+## Datasets
+
+HVAC-MFR is evaluated on PASCAL VOC 2012 and Cityscapes. The dataset paths in the provided configs can be modified according to the local machine.
+
+### PASCAL VOC 2012
+
+The VOC config uses `PascalVOCDataset` with 21 classes. The expected directory structure is:
+
+```text
+data/VOCdevkit/VOC2012/
+├── JPEGImages/
+├── SegmentationClass/
+└── ImageSets/
+    └── Segmentation/
+        ├── train.txt
+        └── val.txt
+```
+
+The corresponding config is:
+
+```text
+configs/hvac_mfr/hvac_mfr-t_1xb4-160k_voc2012-512x512.py
+```
+
+Key dataset settings:
+
+| Item | Setting |
+|---|---|
+| Dataset type | `PascalVOCDataset` |
+| Data root | `data/VOCdevkit/VOC2012` |
+| Image directory | `JPEGImages` |
+| Annotation directory | `SegmentationClass` |
+| Train split | `ImageSets/Segmentation/train.txt` |
+| Validation split | `ImageSets/Segmentation/val.txt` |
+| Number of classes | 21 |
+| Crop size | 512 × 512 |
+
+### Cityscapes
+
+The Cityscapes configs use `CityscapesDataset` with 19 classes. The expected directory structure is:
+
+```text
+data/cityscapes/
+├── leftImg8bit/
+│   ├── train/
+│   ├── val/
+│   └── test/
+└── gtFine/
+    ├── train/
+    ├── val/
+    └── test/
+```
+
+The corresponding configs are:
+
+```text
+configs/hvac_mfr/hvac_mfr-t_1xb4-160k_cityscapes-512x1024.py
+configs/hvac_mfr/hvac_mfr-t_in1k-pre_1xb4-160k_cityscapes-512x1024.py
+```
+
+Key dataset settings:
+
+| Item | Setting |
+|---|---|
+| Dataset type | `CityscapesDataset` |
+| Data root | `data/cityscapes` |
+| Train images | `leftImg8bit/train` |
+| Train annotations | `gtFine/train` |
+| Validation images | `leftImg8bit/val` |
+| Validation annotations | `gtFine/val` |
+| Number of classes | 19 |
+| Crop size | 512 × 1024 |
+
+## Configuration overview
+
+All provided HVAC-MFR configs use the same main model structure:
+
+| Component | Setting |
+|---|---|
+| Model type | `EncoderDecoder` |
+| Backbone | `HVACMFR` |
+| Decode head | `HVACMFRHead` |
+| Encoder channels | `[32, 64, 160, 256]` |
+| Encoder depths | `[3, 3, 5, 2]` |
+| Optimizer | AdamW |
+| Learning rate | 6e-5 |
+| Betas | `(0.9, 0.999)` |
+| Weight decay | 0.01 |
+| Batch size | 4 |
+| Training iterations | 160,000 |
+| Validation interval | 16,000 |
+| Checkpoint interval | 16,000 |
+| LR schedule | Linear warm-up for 1,500 iterations + polynomial decay |
+
+The training pipeline is:
+
+```text
+LoadImageFromFile → LoadAnnotations → RandomResize(ratio_range=0.5–2.0) → RandomCrop → RandomFlip(prob=0.5) → PhotoMetricDistortion → PackSegInputs
+```
+
+The pretrained Cityscapes config uses:
+
+```text
+pretrain/hvac_mfr_in1k_full.pth
+```
+
+This path can be changed directly in the config or overridden with `--cfg-options`.
+
 ## Pretraining
 
 For HVAC-MFR, compatible encoder layers can be initialized from ImageNet-1K pretrained MSCAN-T weights, while the newly introduced HVAC and MFRB modules are randomly initialized.

@@ -12,7 +12,7 @@ _base_ = [
 norm_cfg = dict(type='BN', requires_grad=True)
 head_norm_cfg = dict(type='GN', num_groups=32, requires_grad=True)
 crop_size = (512, 1024)
-data_root = 'D:/Program Files/Git/dev/cityscapes/'
+data_root = 'data/cityscapes'
 
 data_preprocessor = dict(
     type='SegDataPreProcessor',
