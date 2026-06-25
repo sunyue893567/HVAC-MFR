@@ -55,3 +55,9 @@ Expected complexity:
 | HVAC-MFR | - | STDC2 | 13.1 | 117.8 | 79.2 |
 
 The values are reported with one decimal place to match the comparison table format.
+
+To print the same table row from code:
+
+```bash
+python report_hvac_mfr_stdc2_metrics.py
+```
