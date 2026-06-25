@@ -30,34 +30,69 @@ The experiments on the current server were run on a single NVIDIA GeForce RTX 40
 
 ## Installation
 
+Create a conda environment:
+
 ```bash
 conda create -n hvac-mfr python=3.10 -y
 conda activate hvac-mfr
+```
 
+Install PyTorch:
+
+```bash
 pip install torch==2.1.2+cu118 torchvision==0.16.2+cu118 \
   --index-url https://download.pytorch.org/whl/cu118
+```
 
+Install OpenMMLab dependencies:
+
+```bash
 pip install -U openmim
 mim install mmengine==0.10.7
 mim install mmcv==2.2.0
+```
 
+Install MMSegmentation:
+
+```bash
 git clone https://github.com/open-mmlab/mmsegmentation.git
 cd mmsegmentation
 git checkout v1.2.2
 pip install -v -e .
+```
 
+Install additional packages:
+
+```bash
 pip install numpy==1.26.4 opencv-python==4.13.0.92 pillow==10.3.0 \
   scipy==1.15.3 prettytable==3.18.0 packaging==24.1 yapf==0.43.0
 ```
 
-## Model registration
+## Project placement
 
-The provided configuration files use `custom_imports` to register the HVAC-MFR backbone and decode head automatically. Manual registration is therefore not required for the provided configs. Additional registration notes are provided in `docs/registration.md`.
+This project follows the MMSegmentation directory layout. The HVAC-MFR files should be placed under an MMSegmentation working directory as follows:
 
+```text
+mmsegmentation/
+├── configs/
+│   └── hvac_mfr/
+│       ├── hvac_mfr-t_1xb4-160k_voc2012-512x512.py
+│       └── hvac_mfr-t_1xb4-160k_cityscapes-512x1024.py
+├── mmseg/
+│   └── models/
+│       ├── backbones/
+│       │   └── hvac_mfr.py
+│       └── decode_heads/
+│           └── hvac_mfr_head.py
+└── docs/
+    └── registration.md
+```
+
+The provided configuration files use `custom_imports` to register the HVAC-MFR backbone and decode head automatically. Manual registration is not required for the provided configs.
 
 ## Datasets
 
-HVAC-MFR is evaluated on PASCAL VOC 2012 and Cityscapes. The dataset paths in the provided configs can be modified according to the local machine.
+HVAC-MFR is evaluated on PASCAL VOC 2012 and Cityscapes. Dataset paths can be modified directly in the config files or overridden at runtime with `--cfg-options`.
 
 ### PASCAL VOC 2012
 
@@ -90,11 +125,11 @@ Key dataset settings:
 | Train split | `ImageSets/Segmentation/train.txt` |
 | Validation split | `ImageSets/Segmentation/val.txt` |
 | Number of classes | 21 |
-| Crop size | 512 × 512 |
+| Crop size | 512 x 512 |
 
 ### Cityscapes
 
-The Cityscapes configs use `CityscapesDataset` with 19 classes. The expected directory structure is:
+The Cityscapes config uses `CityscapesDataset` with 19 classes. The expected directory structure is:
 
 ```text
 data/cityscapes/
@@ -108,11 +143,10 @@ data/cityscapes/
     └── test/
 ```
 
-The corresponding configs are:
+The corresponding config is:
 
 ```text
 configs/hvac_mfr/hvac_mfr-t_1xb4-160k_cityscapes-512x1024.py
-configs/hvac_mfr/hvac_mfr-t_in1k-pre_1xb4-160k_cityscapes-512x1024.py
 ```
 
 Key dataset settings:
@@ -126,7 +160,7 @@ Key dataset settings:
 | Validation images | `leftImg8bit/val` |
 | Validation annotations | `gtFine/val` |
 | Number of classes | 19 |
-| Crop size | 512 × 1024 |
+| Crop size | 512 x 1024 |
 
 ## Configuration overview
 
@@ -152,44 +186,129 @@ All provided HVAC-MFR configs use the same main model structure:
 The training pipeline is:
 
 ```text
-LoadImageFromFile → LoadAnnotations → RandomResize(ratio_range=0.5–2.0) → RandomCrop → RandomFlip(prob=0.5) → PhotoMetricDistortion → PackSegInputs
+LoadImageFromFile -> LoadAnnotations -> RandomResize(ratio_range=0.5-2.0) -> RandomCrop -> RandomFlip(prob=0.5) -> PhotoMetricDistortion -> PackSegInputs
 ```
 
-The pretrained Cityscapes config uses:
+## Initialization
 
-```text
-pretrain/hvac_mfr_in1k_full.pth
-```
-
-This path can be changed directly in the config or overridden with `--cfg-options`.
-
-## Pretraining
-
-For HVAC-MFR, compatible encoder layers can be initialized from ImageNet-1K pretrained MSCAN-T weights, while the newly introduced HVAC and MFRB modules are randomly initialized.
-
-When using a local pretrained checkpoint, set the checkpoint path in the configuration file or override it at runtime:
-
-```bash
-python tools/train.py configs/hvac_mfr/hvac_mfr-t_in1k-pre_1xb4-160k_cityscapes-512x1024.py \
-  --cfg-options model.backbone.init_cfg.checkpoint=/path/to/hvac_mfr_in1k_full.pth
-```
+The commands below run HVAC-MFR without requiring an external pretrained checkpoint. Model parameters follow the initialization strategy defined by MMSegmentation and the model implementation.
 
 ## Training
 
-PASCAL VOC 2012:
+Run all commands from the root directory of the MMSegmentation project.
+
+### Train on PASCAL VOC 2012
 
 ```bash
-python tools/train.py configs/hvac_mfr/hvac_mfr-t_1xb4-160k_voc2012-512x512.py
+python tools/train.py configs/hvac_mfr/hvac_mfr-t_1xb4-160k_voc2012-512x512.py \
+  --work-dir work_dirs/hvac_mfr_voc2012
 ```
 
-Cityscapes:
+If the VOC dataset is stored in another directory:
 
 ```bash
-python tools/train.py configs/hvac_mfr/hvac_mfr-t_1xb4-160k_cityscapes-512x1024.py
+python tools/train.py configs/hvac_mfr/hvac_mfr-t_1xb4-160k_voc2012-512x512.py \
+  --work-dir work_dirs/hvac_mfr_voc2012 \
+  --cfg-options \
+  train_dataloader.dataset.data_root=/path/to/VOCdevkit/VOC2012 \
+  val_dataloader.dataset.data_root=/path/to/VOCdevkit/VOC2012 \
+  test_dataloader.dataset.data_root=/path/to/VOCdevkit/VOC2012
 ```
 
-Cityscapes with ImageNet-1K compatible initialization:
+### Train on Cityscapes
 
 ```bash
-python tools/train.py configs/hvac_mfr/hvac_mfr-t_in1k-pre_1xb4-160k_cityscapes-512x1024.py
+python tools/train.py configs/hvac_mfr/hvac_mfr-t_1xb4-160k_cityscapes-512x1024.py \
+  --work-dir work_dirs/hvac_mfr_cityscapes
+```
+
+If the Cityscapes dataset is stored in another directory:
+
+```bash
+python tools/train.py configs/hvac_mfr/hvac_mfr-t_1xb4-160k_cityscapes-512x1024.py \
+  --work-dir work_dirs/hvac_mfr_cityscapes \
+  --cfg-options \
+  train_dataloader.dataset.data_root=/path/to/cityscapes \
+  val_dataloader.dataset.data_root=/path/to/cityscapes \
+  test_dataloader.dataset.data_root=/path/to/cityscapes
+```
+
+### Resume training
+
+```bash
+python tools/train.py configs/hvac_mfr/hvac_mfr-t_1xb4-160k_cityscapes-512x1024.py \
+  --work-dir work_dirs/hvac_mfr_cityscapes \
+  --resume
+```
+
+### Monitor training logs
+
+```bash
+tail -f work_dirs/hvac_mfr_cityscapes/*.log
+```
+
+To show only training iterations:
+
+```bash
+tail -f work_dirs/hvac_mfr_cityscapes/*.log | grep "Iter(train)"
+```
+
+## Validation
+
+After training, evaluate a saved checkpoint with `tools/test.py`.
+
+### Validate on PASCAL VOC 2012
+
+```bash
+python tools/test.py \
+  configs/hvac_mfr/hvac_mfr-t_1xb4-160k_voc2012-512x512.py \
+  <checkpoint_file>
+```
+
+### Validate on Cityscapes
+
+```bash
+python tools/test.py \
+  configs/hvac_mfr/hvac_mfr-t_1xb4-160k_cityscapes-512x1024.py \
+  <checkpoint_file>
+```
+
+The evaluation results, including mIoU, will be printed in the terminal and saved in the corresponding work directory logs.
+
+## Inference
+
+Use `demo/image_demo.py` for single-image inference.
+
+### PASCAL VOC 2012 example
+
+```bash
+python demo/image_demo.py \
+  data/VOCdevkit/VOC2012/JPEGImages/2007_000033.jpg \
+  configs/hvac_mfr/hvac_mfr-t_1xb4-160k_voc2012-512x512.py \
+  <checkpoint_file> \
+  --device cuda:0 \
+  --out-file outputs/voc_demo_result.png
+```
+
+### Cityscapes example
+
+```bash
+python demo/image_demo.py \
+  data/cityscapes/leftImg8bit/val/frankfurt/frankfurt_000000_000294_leftImg8bit.png \
+  configs/hvac_mfr/hvac_mfr-t_1xb4-160k_cityscapes-512x1024.py \
+  <checkpoint_file> \
+  --device cuda:0 \
+  --out-file outputs/cityscapes_demo_result.png
+```
+
+## Common workflow
+
+```text
+1. Install the environment.
+2. Prepare the dataset according to the required directory structure.
+3. Place HVAC-MFR code and configs under the MMSegmentation project.
+4. Train the model with tools/train.py.
+5. Monitor logs and checkpoints under work_dirs/.
+6. Evaluate the trained checkpoint with tools/test.py.
+7. Run single-image inference with demo/image_demo.py.
 ```
