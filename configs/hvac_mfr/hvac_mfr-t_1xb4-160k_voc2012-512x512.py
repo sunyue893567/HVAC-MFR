@@ -36,8 +36,7 @@ model = dict(
         depths=[3, 3, 5, 2],
         hvac_axis_kernel_size=7,
         act_cfg=dict(type='GELU'),
-        norm_cfg=norm_cfg,
-        init_cfg=dict(type='Pretrained', checkpoint='pretrain/hvac_mfr_in1k_full.pth')),
+        norm_cfg=norm_cfg),
     decode_head=dict(
         type='HVACMFRHead',
         in_channels=[32, 64, 160, 256],
