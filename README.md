@@ -9,7 +9,8 @@ Official implementation of **HVAC-MFR**, a lightweight semantic segmentation fra
 - `configs/hvac_mfr/`: training configurations for Cityscapes and PASCAL VOC 2012, including the fine-tuning / TTA recipe used for the ensemble.
 - `docs/registration.md`: optional registration notes for MMSegmentation.
 - `ensemble_tta_voc.py` / `ensemble_weight_search.py`: multi-scale + flip TTA with multi-model softmax-probability ensembling and weighted member search.
-- `ENSEMBLE_76.md` / `EXPERIMENTS_TABLE.md`: reproduction guide and result tables for the PASCAL VOC 2012 **76.28 mIoU** ensemble.
+- `reproduce.sh`: one-command wrapper that runs the ensemble search over the trained members.
+- `ENSEMBLE_76.md` / `EXPERIMENTS_TABLE.md`: reproduction guide and result tables for the PASCAL VOC 2012 ensemble.
 
 ## Environment
 
@@ -354,14 +355,14 @@ python demo/image_demo.py \
   --out-file outputs/cityscapes_demo_result.png
 ```
 
-## Reproducing the 76.28 mIoU result (PASCAL VOC 2012)
+## Reproducing the ensemble result (PASCAL VOC 2012)
 
-The **76.28 mIoU** result is obtained with a test-time augmentation (TTA) plus
-multi-model **softmax-probability ensemble**. The key idea: unlike weight averaging
-(model soup), which saturates around 75.49, averaging the *softmax probabilities*
-of models trained with **different seeds and loss recipes** keeps improving. The
-most useful "decorrelated" members come from fine-tuning the plain-Lovász `ft40k`
-recipe on top of several **independent 160k base checkpoints**.
+The result is obtained with test-time augmentation (TTA) plus a multi-model
+**softmax-probability ensemble**. The key idea: unlike weight averaging (model
+soup), which saturates, averaging the *softmax probabilities* of models trained
+with **different seeds and loss recipes** keeps improving. The most useful
+"decorrelated" members come from fine-tuning the plain-Lovász `ft40k` recipe on
+top of several **independent 160k base checkpoints**.
 
 The scripts are `ensemble_tta_voc.py` (probability ensemble with per-model
 multi-scale `[0.5, 0.75, 1.0, 1.25, 1.5, 1.75]` + flip TTA) and
@@ -406,34 +407,14 @@ configs are under `configs/hvac_mfr/`.
 Collect the 11 member checkpoints trained in Steps 1–2, then run the weighted
 search. It runs each member's TTA once per image, scores the weight vectors in a
 single pass, and **prints the top weightings — the best line is the reproduced
-metric.** With `--seed 30` the search is deterministic and its top line is
-**76.28 mIoU**:
+metric.** The search (`--seed 30`) is deterministic; run it with:
 
 ```bash
-python ensemble_weight_search.py \
-  configs/hvac_mfr/hvac_mfr-t_in1k-pre_aux-ohem_lovasz-ft40k_tta_voc2012aug.py \
-  --seed 30 --nrand 400 \
-  --ckpts \
-    work_dirs/hvac_mfr_model_soups_seed3407/soup_stage2_rare_a075.pth \
-    work_dirs/hvac_mfr-t_lovasz-stage3-rare-crop-p50-ft8k_seed3407/best_mIoU_iter_8000.pth \
-    work_dirs/hvac_mfr-t_lovasz-stage3-rare-crop-p75-ft8k_seed3407/best_mIoU_iter_8000.pth \
-    work_dirs/hvac_mfr-t_in1k-pre_aux-ohem_lovasz-ft40k_voc2012aug_from-aux160k_seed3407/best_mIoU_iter_36000.pth \
-    work_dirs/hvac_mfr-t_in1k-pre_aux-ohem_lovasz-ft40k_voc2012aug_from-aux160k_seed2029/best_mIoU_iter_40000.pth \
-    work_dirs/hvac_mfr-t_in1k-pre_aux-ohem_lovasz-ft40k_voc2012aug_from-aux160k_seed2031/best_mIoU_iter_38000.pth \
-    work_dirs/hvac_mfr-t_in1k-pre_lovasz-ft40k_voc2012aug_from-base160k_seed3407/best_mIoU_iter_36000.pth \
-    work_dirs/hvac_mfr-t_in1k-pre_lovasz-ft40k_voc2012aug_from-base2031_seed6031/best_mIoU_iter_32000.pth \
-    work_dirs/hvac_mfr-t_in1k-pre_lovasz-ft40k_voc2012aug_from-adamw160k_seed7001/best_mIoU_iter_24000.pth \
-    work_dirs/hvac_mfr-t_in1k-pre_lovasz-ft40k_voc2012aug_from-base2029_seed6029/best_mIoU_iter_24000.pth \
-    work_dirs/hvac_mfr-t_in1k-pre_lovasz-ft40k_voc2012aug_from-base3407_seed6407/best_mIoU_iter_40000.pth
+bash reproduce.sh
 ```
 
-Expected output (top line):
-
-```text
-76.280  ...  [weight vector]
-```
-
-The exact 11-member pool, the winning weight vector, and the honest val-tuning
+`reproduce.sh` holds the 11 member checkpoint paths and the search settings, so no
+long command is needed. The exact 11-member pool, the winning weight vector, and the honest val-tuning
 caveat are documented in [`ENSEMBLE_76.md`](ENSEMBLE_76.md); per-experiment
 single-model and ensemble numbers are in
 [`EXPERIMENTS_TABLE.md`](EXPERIMENTS_TABLE.md).
