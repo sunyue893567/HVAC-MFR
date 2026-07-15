@@ -255,26 +255,6 @@ python tools/train.py configs/hvac_mfr/hvac_mfr-stdc2_1xb4-160k_cityscapes-512x1
   test_dataloader.dataset.data_root=/path/to/cityscapes
 ```
 
-### Resume training
-
-```bash
-python tools/train.py configs/hvac_mfr/hvac_mfr-t_1xb4-160k_cityscapes-512x1024.py \
-  --work-dir work_dirs/hvac_mfr_cityscapes \
-  --resume
-```
-
-### Monitor training logs
-
-```bash
-tail -f work_dirs/hvac_mfr_cityscapes/*.log
-```
-
-To show only training iterations:
-
-```bash
-tail -f work_dirs/hvac_mfr_cityscapes/*.log | grep "Iter(train)"
-```
-
 ## Validation
 
 After training, evaluate a saved checkpoint with `tools/test.py`.
@@ -418,17 +398,4 @@ long command is needed. The exact 11-member pool, the winning weight vector, and
 caveat are documented in [`ENSEMBLE_76.md`](ENSEMBLE_76.md); per-experiment
 single-model and ensemble numbers are in
 [`EXPERIMENTS_TABLE.md`](EXPERIMENTS_TABLE.md).
-
-## Common workflow
-
-```text
-1. Install the environment.
-2. Prepare the dataset according to the required directory structure.
-3. Place HVAC-MFR code and configs under the MMSegmentation project.
-4. Train the model with tools/train.py.
-5. Monitor logs and checkpoints under work_dirs/.
-6. Evaluate the trained checkpoint with tools/test.py.
-7. Calculate Params/GFLOPs with tools/analysis_tools/get_flops.py.
-8. Run single-image inference with demo/image_demo.py.
-```
 
