@@ -6,8 +6,10 @@ Official implementation of **HVAC-MFR**, a lightweight semantic segmentation fra
 
 - `mmseg/models/backbones/hvac_mfr.py`: HVAC-MFR lightweight encoder.
 - `mmseg/models/decode_heads/hvac_mfr_head.py`: HVAC-MFR decode head with GCAM/GSAM refinement.
-- `configs/hvac_mfr/`: training configurations for Cityscapes and PASCAL VOC 2012.
+- `configs/hvac_mfr/`: training configurations for Cityscapes and PASCAL VOC 2012, including the fine-tuning / TTA recipe used for the ensemble.
 - `docs/registration.md`: optional registration notes for MMSegmentation.
+- `ensemble_tta_voc.py` / `ensemble_weight_search.py`: multi-scale + flip TTA with multi-model softmax-probability ensembling and weighted member search.
+- `ENSEMBLE_76.md` / `EXPERIMENTS_TABLE.md`: reproduction guide and result tables for the PASCAL VOC 2012 **76.28 mIoU** ensemble.
 
 ## Environment
 
@@ -351,6 +353,43 @@ python demo/image_demo.py \
   --device cuda:0 \
   --out-file outputs/cityscapes_demo_result.png
 ```
+
+## Test-time augmentation and model ensemble (PASCAL VOC 2012, 76.28 mIoU)
+
+Beyond the single-model configs above, this repository includes a test-time
+augmentation (TTA) and multi-model probability-ensemble pipeline that raises the
+PASCAL VOC 2012 val mIoU to **76.28**.
+
+Method:
+
+- Each member runs multi-scale `[0.5, 0.75, 1.0, 1.25, 1.5, 1.75]` + horizontal-flip TTA.
+- Per-member softmax maps are averaged across members (probability ensemble).
+  Unlike weight averaging (model soup), this benefits from members trained with
+  different seeds and loss recipes, so it keeps improving where soup saturates.
+- `ensemble_weight_search.py` scores many member-weight vectors in a single
+  inference pass to select the best weighting.
+- The most useful decorrelated members come from fine-tuning the plain-Lovász
+  `ft40k` recipe on top of several independent 160k base checkpoints.
+
+Result progression (PASCAL VOC 2012 val):
+
+| Method | mIoU |
+|---|---|
+| Best single model + TTA | 75.46 |
+| Weight soup (alpha=0.75) + TTA | 75.49 |
+| Probability ensemble + weighted search | 75.99 |
+| + decorrelated members (plain-Lovász ft40k from independent bases) | **76.28** |
+
+Run the weighted-ensemble search (from the MMSegmentation project root):
+
+```bash
+python ensemble_weight_search.py \
+  configs/hvac_mfr/hvac_mfr-t_in1k-pre_aux-ohem_lovasz-ft40k_tta_voc2012aug.py \
+  --ckpts <member_1.pth> <member_2.pth> ...
+```
+
+See `ENSEMBLE_76.md` for the exact 11-member pool, the winning weights, and the
+full reproduction command, and `EXPERIMENTS_TABLE.md` for per-experiment results.
 
 ## Common workflow
 
