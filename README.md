@@ -71,29 +71,6 @@ pip install numpy==1.26.4 opencv-python==4.13.0.92 pillow==10.3.0 \
   scipy==1.15.3 prettytable==3.18.0 packaging==24.1 yapf==0.43.0
 ```
 
-## Project placement
-
-This project follows the MMSegmentation directory layout. Place the HVAC-MFR files under an MMSegmentation working directory as follows:
-
-```text
-mmsegmentation/
-|-- configs/
-|   `-- hvac_mfr/
-|       |-- hvac_mfr-t_1xb4-160k_voc2012-512x512.py
-|       |-- hvac_mfr-t_1xb4-160k_cityscapes-512x1024.py
-|       `-- hvac_mfr-stdc2_1xb4-160k_cityscapes-512x1024.py
-|-- mmseg/
-|   `-- models/
-|       |-- backbones/
-|       |   `-- hvac_mfr.py
-|       `-- decode_heads/
-|           `-- hvac_mfr_head.py
-`-- docs/
-    `-- registration.md
-```
-
-The provided configuration files use `custom_imports` to register the HVAC-MFR backbone and decode head automatically. Manual registration is not required for the provided configs.
-
 ## Datasets
 
 HVAC-MFR is evaluated on PASCAL VOC 2012 and Cityscapes. Dataset paths can be modified directly in the config files or overridden at runtime with `--cfg-options`.
@@ -203,10 +180,6 @@ The training pipeline is:
 ```text
 LoadImageFromFile -> LoadAnnotations -> RandomResize(ratio_range=0.5-2.0) -> RandomCrop -> RandomFlip(prob=0.5) -> PhotoMetricDistortion -> PackSegInputs
 ```
-
-## Initialization
-
-The commands below run HVAC-MFR without requiring an external pretrained checkpoint. Model parameters follow the initialization strategy defined by MMSegmentation and the model implementation.
 
 ## Training
 
