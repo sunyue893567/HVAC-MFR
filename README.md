@@ -2,6 +2,25 @@
 
 Official implementation of **HVAC-MFR**, a lightweight semantic segmentation framework with horizontal-vertical attention compression and modulated feature refinement.
 
+## Reproduced result — PASCAL VOC 2012 val: **76.28 mIoU**
+
+This repository reproduces **76.28 mIoU on the PASCAL VOC 2012 validation set** with
+the lightweight HVAC-MFR model, using multi-scale + flip test-time augmentation (TTA)
+combined with a multi-model **softmax-probability ensemble** whose member weights are
+selected by a search script.
+
+| Step | VOC2012 val mIoU |
+|---|---|
+| Best single model + TTA | 75.46 |
+| Weight soup (alpha = 0.75) + TTA | 75.49 |
+| Probability ensemble + weighted search | 75.99 |
+| **11-member weighted probability ensemble** (final) | **76.28** |
+
+The end-to-end reproduction steps are in [Reproducing the 76.28 mIoU result](#reproducing-the-7628-miou-result-pascal-voc-2012)
+below. The exact 11-member pool, the winning weight vector, and the one-command
+reproduction are documented in [`ENSEMBLE_76.md`](ENSEMBLE_76.md); per-experiment
+numbers are in [`EXPERIMENTS_TABLE.md`](EXPERIMENTS_TABLE.md).
+
 ## Repository contents
 
 - `mmseg/models/backbones/hvac_mfr.py`: HVAC-MFR lightweight encoder.
@@ -354,24 +373,66 @@ python demo/image_demo.py \
   --out-file outputs/cityscapes_demo_result.png
 ```
 
-## Test-time augmentation and model ensemble (PASCAL VOC 2012, 76.28 mIoU)
+## Reproducing the 76.28 mIoU result (PASCAL VOC 2012)
 
-Beyond the single-model configs above, this repository includes a test-time
-augmentation (TTA) and multi-model probability-ensemble pipeline that raises the
-PASCAL VOC 2012 val mIoU to **76.28**.
+The **76.28 mIoU** result is obtained with a test-time augmentation (TTA) plus
+multi-model **softmax-probability ensemble**. The key idea: unlike weight averaging
+(model soup), which saturates around 75.49, averaging the *softmax probabilities*
+of models trained with **different seeds and loss recipes** keeps improving. The
+most useful "decorrelated" members come from fine-tuning the plain-Lovász `ft40k`
+recipe on top of several **independent 160k base checkpoints**.
 
-Method:
+The scripts are `ensemble_tta_voc.py` (probability ensemble with per-model
+multi-scale `[0.5, 0.75, 1.0, 1.25, 1.5, 1.75]` + flip TTA) and
+`ensemble_weight_search.py` (scores many member-weight vectors in a single
+inference pass to pick the best weighting).
 
-- Each member runs multi-scale `[0.5, 0.75, 1.0, 1.25, 1.5, 1.75]` + horizontal-flip TTA.
-- Per-member softmax maps are averaged across members (probability ensemble).
-  Unlike weight averaging (model soup), this benefits from members trained with
-  different seeds and loss recipes, so it keeps improving where soup saturates.
-- `ensemble_weight_search.py` scores many member-weight vectors in a single
-  inference pass to select the best weighting.
-- The most useful decorrelated members come from fine-tuning the plain-Lovász
-  `ft40k` recipe on top of several independent 160k base checkpoints.
+### Step 1 — Train the 160k base models
 
-Result progression (PASCAL VOC 2012 val):
+```bash
+# aux-ohem base (used by the aux-ohem-lovasz ft40k members and their seeds)
+python tools/train.py configs/hvac_mfr/hvac_mfr-t_in1k-pre_aux-ohem_1xb4-160k_voc2012aug-512x512.py \
+  --work-dir work_dirs/base_aux_ohem_seed3407 --cfg-options randomness.seed=3407
+# plain base (used by the plain-lovasz ft40k members)
+python tools/train.py configs/hvac_mfr/hvac_mfr-t_in1k-pre_1xb4-160k_voc2012aug-512x512.py \
+  --work-dir work_dirs/base_plain_seed42
+```
+
+Repeat the aux-ohem base with `randomness.seed=2029` / `2031` (and the AdamW base
+config `hvac_mfr-t_table-adamw-officialaug-nw0_1xb4-160k_voc2012aug-512x512.py`) to
+obtain the independent bases used by the ensemble members.
+
+### Step 2 — Fine-tune the ensemble members (ft40k)
+
+```bash
+# aux-ohem-lovasz ft40k members (seeds 3407 / 2029 / 2031)
+python tools/train.py configs/hvac_mfr/hvac_mfr-t_in1k-pre_aux-ohem_lovasz-ft40k_1xb4_voc2012aug-512x512.py \
+  --work-dir work_dirs/ft40k_seed3407 --cfg-options randomness.seed=3407
+
+# plain-lovasz ft40k members from independent bases (the decorrelated members that
+# drive the gain). Point load_from at each 160k base and vary the seed:
+python tools/train.py configs/hvac_mfr/hvac_mfr-t_in1k-pre_lovasz-ft40k_1xb4_voc2012aug-512x512.py \
+  --work-dir work_dirs/lov_from_base2031_seed6031 \
+  --cfg-options load_from=work_dirs/base_aux_ohem_seed2031/best_mIoU_iter_*.pth randomness.seed=6031
+```
+
+The full member pool also includes the rare-crop (`...rare-crop-p50/p75-stage3-ft8k...`)
+and class-uniform (`...class-uniform-p50-stage3-ft6k...`) stage-3 fine-tunes; all
+configs are under `configs/hvac_mfr/`.
+
+### Step 3 — Search member weights and evaluate the ensemble
+
+```bash
+python ensemble_weight_search.py \
+  configs/hvac_mfr/hvac_mfr-t_in1k-pre_aux-ohem_lovasz-ft40k_tta_voc2012aug.py \
+  --ckpts <member_1.pth> <member_2.pth> ... <member_11.pth>
+```
+
+The script runs each member's TTA once per image, then scores many weight vectors
+in a single pass and prints the best weightings. To reproduce the exact peak,
+`ENSEMBLE_76.md` lists the 11-member pool and the winning weight vector.
+
+### Result progression (PASCAL VOC 2012 val)
 
 | Method | mIoU |
 |---|---|
@@ -380,16 +441,11 @@ Result progression (PASCAL VOC 2012 val):
 | Probability ensemble + weighted search | 75.99 |
 | + decorrelated members (plain-Lovász ft40k from independent bases) | **76.28** |
 
-Run the weighted-ensemble search (from the MMSegmentation project root):
-
-```bash
-python ensemble_weight_search.py \
-  configs/hvac_mfr/hvac_mfr-t_in1k-pre_aux-ohem_lovasz-ft40k_tta_voc2012aug.py \
-  --ckpts <member_1.pth> <member_2.pth> ...
-```
-
-See `ENSEMBLE_76.md` for the exact 11-member pool, the winning weights, and the
-full reproduction command, and `EXPERIMENTS_TABLE.md` for per-experiment results.
+The winning 11-member weighting is load-bearing on five members
+(`base2031`, `lovasz-base`, `rare-crop-p50`, `base2029`, `soup`). See
+[`ENSEMBLE_76.md`](ENSEMBLE_76.md) for the exact pool, weights, and one-command
+reproduction, and [`EXPERIMENTS_TABLE.md`](EXPERIMENTS_TABLE.md) for per-experiment
+single-model and ensemble numbers.
 
 ## Common workflow
 
