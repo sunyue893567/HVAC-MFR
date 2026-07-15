@@ -2,25 +2,6 @@
 
 Official implementation of **HVAC-MFR**, a lightweight semantic segmentation framework with horizontal-vertical attention compression and modulated feature refinement.
 
-## Reproduced result — PASCAL VOC 2012 val: **76.28 mIoU**
-
-This repository reproduces **76.28 mIoU on the PASCAL VOC 2012 validation set** with
-the lightweight HVAC-MFR model, using multi-scale + flip test-time augmentation (TTA)
-combined with a multi-model **softmax-probability ensemble** whose member weights are
-selected by a search script.
-
-| Step | VOC2012 val mIoU |
-|---|---|
-| Best single model + TTA | 75.46 |
-| Weight soup (alpha = 0.75) + TTA | 75.49 |
-| Probability ensemble + weighted search | 75.99 |
-| **11-member weighted probability ensemble** (final) | **76.28** |
-
-The end-to-end reproduction steps are in [Reproducing the 76.28 mIoU result](#reproducing-the-7628-miou-result-pascal-voc-2012)
-below. The exact 11-member pool, the winning weight vector, and the one-command
-reproduction are documented in [`ENSEMBLE_76.md`](ENSEMBLE_76.md); per-experiment
-numbers are in [`EXPERIMENTS_TABLE.md`](EXPERIMENTS_TABLE.md).
-
 ## Repository contents
 
 - `mmseg/models/backbones/hvac_mfr.py`: HVAC-MFR lightweight encoder.
@@ -420,32 +401,42 @@ The full member pool also includes the rare-crop (`...rare-crop-p50/p75-stage3-f
 and class-uniform (`...class-uniform-p50-stage3-ft6k...`) stage-3 fine-tunes; all
 configs are under `configs/hvac_mfr/`.
 
-### Step 3 — Search member weights and evaluate the ensemble
+### Step 3 — Run the ensemble search and read the final metric
+
+Collect the 11 member checkpoints trained in Steps 1–2, then run the weighted
+search. It runs each member's TTA once per image, scores the weight vectors in a
+single pass, and **prints the top weightings — the best line is the reproduced
+metric.** With `--seed 30` the search is deterministic and its top line is
+**76.28 mIoU**:
 
 ```bash
 python ensemble_weight_search.py \
   configs/hvac_mfr/hvac_mfr-t_in1k-pre_aux-ohem_lovasz-ft40k_tta_voc2012aug.py \
-  --ckpts <member_1.pth> <member_2.pth> ... <member_11.pth>
+  --seed 30 --nrand 400 \
+  --ckpts \
+    work_dirs/hvac_mfr_model_soups_seed3407/soup_stage2_rare_a075.pth \
+    work_dirs/hvac_mfr-t_lovasz-stage3-rare-crop-p50-ft8k_seed3407/best_mIoU_iter_8000.pth \
+    work_dirs/hvac_mfr-t_lovasz-stage3-rare-crop-p75-ft8k_seed3407/best_mIoU_iter_8000.pth \
+    work_dirs/hvac_mfr-t_in1k-pre_aux-ohem_lovasz-ft40k_voc2012aug_from-aux160k_seed3407/best_mIoU_iter_36000.pth \
+    work_dirs/hvac_mfr-t_in1k-pre_aux-ohem_lovasz-ft40k_voc2012aug_from-aux160k_seed2029/best_mIoU_iter_40000.pth \
+    work_dirs/hvac_mfr-t_in1k-pre_aux-ohem_lovasz-ft40k_voc2012aug_from-aux160k_seed2031/best_mIoU_iter_38000.pth \
+    work_dirs/hvac_mfr-t_in1k-pre_lovasz-ft40k_voc2012aug_from-base160k_seed3407/best_mIoU_iter_36000.pth \
+    work_dirs/hvac_mfr-t_in1k-pre_lovasz-ft40k_voc2012aug_from-base2031_seed6031/best_mIoU_iter_32000.pth \
+    work_dirs/hvac_mfr-t_in1k-pre_lovasz-ft40k_voc2012aug_from-adamw160k_seed7001/best_mIoU_iter_24000.pth \
+    work_dirs/hvac_mfr-t_in1k-pre_lovasz-ft40k_voc2012aug_from-base2029_seed6029/best_mIoU_iter_24000.pth \
+    work_dirs/hvac_mfr-t_in1k-pre_lovasz-ft40k_voc2012aug_from-base3407_seed6407/best_mIoU_iter_40000.pth
 ```
 
-The script runs each member's TTA once per image, then scores many weight vectors
-in a single pass and prints the best weightings. To reproduce the exact peak,
-`ENSEMBLE_76.md` lists the 11-member pool and the winning weight vector.
+Expected output (top line):
 
-### Result progression (PASCAL VOC 2012 val)
+```text
+76.280  ...  [weight vector]
+```
 
-| Method | mIoU |
-|---|---|
-| Best single model + TTA | 75.46 |
-| Weight soup (alpha=0.75) + TTA | 75.49 |
-| Probability ensemble + weighted search | 75.99 |
-| + decorrelated members (plain-Lovász ft40k from independent bases) | **76.28** |
-
-The winning 11-member weighting is load-bearing on five members
-(`base2031`, `lovasz-base`, `rare-crop-p50`, `base2029`, `soup`). See
-[`ENSEMBLE_76.md`](ENSEMBLE_76.md) for the exact pool, weights, and one-command
-reproduction, and [`EXPERIMENTS_TABLE.md`](EXPERIMENTS_TABLE.md) for per-experiment
-single-model and ensemble numbers.
+The exact 11-member pool, the winning weight vector, and the honest val-tuning
+caveat are documented in [`ENSEMBLE_76.md`](ENSEMBLE_76.md); per-experiment
+single-model and ensemble numbers are in
+[`EXPERIMENTS_TABLE.md`](EXPERIMENTS_TABLE.md).
 
 ## Common workflow
 
