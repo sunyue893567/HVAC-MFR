@@ -11,6 +11,7 @@ Official implementation of **HVAC-MFR**, a lightweight semantic segmentation fra
 - `ensemble_tta_voc.py` / `ensemble_weight_search.py`: multi-scale + flip TTA with multi-model softmax-probability ensembling and weighted member search.
 - `reproduce.sh`: one-command wrapper that runs the ensemble search over the trained members.
 - `ENSEMBLE_76.md` / `EXPERIMENTS_TABLE.md`: reproduction guide and result tables for the PASCAL VOC 2012 ensemble.
+- `REPRODUCIBILITY.md`: current reproduction index for the manuscript results supported by this repository.
 
 ## Environment
 
@@ -180,6 +181,22 @@ The training pipeline is:
 ```text
 LoadImageFromFile -> LoadAnnotations -> RandomResize(ratio_range=0.5-2.0) -> RandomCrop -> RandomFlip(prob=0.5) -> PhotoMetricDistortion -> PackSegInputs
 ```
+
+## Reproducibility support
+
+The current public repository provides detailed reproduction support for the
+main PASCAL VOC 2012 ensemble result and the Cityscapes STDC2-transfer result.
+The VOC result is reproduced with multi-scale/flip test-time augmentation and an
+11-member softmax-probability ensemble using `ensemble_tta_voc.py`,
+`ensemble_weight_search.py`, and `reproduce.sh`. The Cityscapes result is
+reproduced with the STDC2-transfer configuration under `configs/hvac_mfr/` and
+the corresponding TTA evaluation configuration.
+
+Please see [`REPRODUCIBILITY.md`](REPRODUCIBILITY.md) for the mapping between
+manuscript items, configuration files, checkpoint sources, and reproduction
+scripts. Results obtained with TTA, model ensemble, or transfer settings are
+explicitly marked there to avoid mixing them with single-model single-scale
+evaluation.
 
 ## Training
 
